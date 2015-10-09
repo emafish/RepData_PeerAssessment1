@@ -1,65 +1,91 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
 output: 
-  html_document:
+  html_document: PA1_Sep2015.html
     keep_md: true
 ---
 
 
 ## Loading and preprocessing the data
+```{r eval=FALSE}
 library(data.table)
-df <- read.csv("activity.csv")
-
-## What is mean total number of steps taken per day?
+library(shiny)
+library(ggplot2)
 library(dplyr)
+library(tidyr)
+df <- read.csv("activity.csv")
+```
+## What is mean total number of steps taken per day?
+Use aggregate() to make a new datatable with date v.s. total steps
+```{r eval=FALSE}
 total_steps <- aggregate(steps ~ date, FUN = sum, data = df)
-png("instructions_fig/plot1.png", width = 480, height = 480)
+```
+
+The histogram of total steps per day
+
+```{r echo=FALSE}
   hist(total_steps$steps)
-dev.off()
+```
+
+There mean and median of total number of steps per day:
+```{r echo=TRUE}
 mean(total_steps$steps)
 median(total_steps$steps)
-
+```
 ## What is the average daily activity pattern?
+Use the summarize() function:
+```{r eval=FALSE}
 tmp <- summarize(group_by(df, interval), mean(steps, na.rm = T))
+```
+Average daily activity
 
-png("instructions_fig/plot2.png", width = 480, height = 480)
-  
+```{r echo=FALSE}
   plot(tmp, type = "l", 
        main = "Average across all Days",
        xlab = "5-minute Interval",
        ylab = "Average Number of Steps Taken")
-  
-dev.off()
+```
 
+Use summarize() to create a new datatable interval v.s. steps
+```{r eval=FALSE}
 tmp <- summarize(group_by(df, interval), mean(steps, na.rm = T))
-summary(tmp)
-## interval      mean(steps, na.rm = T)
-## Min.   :   0.0   Min.   :  0.000       
-## 1st Qu.: 588.8   1st Qu.:  2.486       
-## Median :1177.5   Median : 34.113       
-## Mean   :1177.5   Mean   : 37.383       
-## 3rd Qu.:1766.2   3rd Qu.: 52.835       
-## Max.   :2355.0   Max.   :206.170 
+```
 
+Using summary(), find the maximum number of steps. Use the result to find the row containing maximum number of steps.
+```{r echo=TRUE}
+summary(tmp)
 filter(tmp, tmp$`mean(steps, na.rm = T)` > 206)
-## Interval 835 contains the maximum number of steps.
+```
 
 ## Imputing missing values
-
+Use summary() to find out how many rows contains missing values(NA)
+```{r echo=TRUE}
 summary(df)
-## missing value = 2304 rows
-library(tidyr)
-## replace NA with mean for that 5-minute interval
+```
+--> missing value = 2304 rows
+
+Replace NA with mean for that 5-minute interval, write the result to a tidy file called padded.csv
+
+```{r eval=FALSE}
 new <- replace_na(df, replace = list(steps = tmp$'mean(steps, na.rm = T)'))
 write.csv(new, "padded.csv", row.names = F)
-## Histogram of total number of steps take each day
-png("instructions_fig/plot3.png", width = 480, height = 480)
+```
+
+Histogram of total number of steps take each day
+
+```{r echo=FALSE}
   tmp <- aggregate(steps ~ date, FUN = sum, data = new)
   hist(tmp$steps)
-dev.off()
+```
+
+```{r echo=TRUE}
 mean(tmp$steps)
 median(tmp$steps)
+```
 ## Are there differences in activity patterns between weekdays and weekends?
+
+Use wday() and bind_cols() to create a new column weekdays
+```{r eval=FALSE}
 library(lubridate)
 x <- sub('2', 'weekday',
         sub('3', 'weekday',
@@ -70,21 +96,23 @@ x <- sub('2', 'weekday',
                             sub('1', 'weekend',
                                 wday(new$date))))))))
 weekdays <- bind_cols(new, data.table(weekdays = x))
+```
 
-png("instructions_fig/plot4.png", width = 480, height = 480)
-  par(mfrow = c(1,2))
-  weekdayfilter(new, weekdays == "weekday")
-    plot(tidyData4$tidyTime, tidyData4$Global_active_power, 
-       type = "l", 
-       ylab = "Global Active Power (kilowatts)", 
-       xlab = "")
-  
-  plot(tidyData4$tidyTime, tidyData4$Voltage, 
-       type = "l", 
-       ylab = "Voltage", 
-       xlab = "datetime")
-    legend("topright", 
-         legend = c("Sub_metering_1", "Sub_metering_2", "Sub_metering_3"), 
-         col = c("black", "red", "blue"), 
-         lty = c(1,1))
-dev.off()
+```{r echo=TRUE}
+head(weekdays)
+```
+
+```{r eval=FALSE}
+group1 <- filter(weekdays, weekdays == "weekday")
+group2 <- filter(weekdays, weekdays == "weekend")
+```
+
+Comparing weekdays and weekend
+
+```{r echo=FALSE}
+  library(lattice)
+  gr <- melt(weekdays, measure.vars = c("weekday","weekend"))
+  xyplot(steps~interval|weekdays, data = gr,
+         panel = "panel.lines", layout = c(1,2))
+
+```

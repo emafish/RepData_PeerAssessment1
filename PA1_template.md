@@ -1,65 +1,142 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
 output: 
-  html_document:
+  html_document: PA1_Sep2015.html
     keep_md: true
 ---
 
 
 ## Loading and preprocessing the data
+
+```r
 library(data.table)
-df <- read.csv("activity.csv")
-
-## What is mean total number of steps taken per day?
+library(shiny)
+library(ggplot2)
 library(dplyr)
+library(tidyr)
+df <- read.csv("activity.csv")
+```
+## What is mean total number of steps taken per day?
+Use aggregate() to make a new datatable with date v.s. total steps
+
+```r
 total_steps <- aggregate(steps ~ date, FUN = sum, data = df)
-png("instructions_fig/plot1.png", width = 480, height = 480)
-  hist(total_steps$steps)
-dev.off()
+```
+
+The histogram of total steps per day
+
+![plot of chunk unnamed-chunk-3](figure/unnamed-chunk-3-1.png) 
+
+There mean and median of total number of steps per day:
+
+```r
 mean(total_steps$steps)
+```
+
+```
+## [1] 10766.19
+```
+
+```r
 median(total_steps$steps)
+```
 
+```
+## [1] 10765
+```
 ## What is the average daily activity pattern?
-tmp <- summarize(group_by(df, interval), mean(steps, na.rm = T))
+Use the summarize() function:
 
-png("instructions_fig/plot2.png", width = 480, height = 480)
-  
-  plot(tmp, type = "l", 
-       main = "Average across all Days",
-       xlab = "5-minute Interval",
-       ylab = "Average Number of Steps Taken")
-  
-dev.off()
-
+```r
 tmp <- summarize(group_by(df, interval), mean(steps, na.rm = T))
+```
+Average daily activity
+
+![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-6-1.png) 
+
+Use summarize() to create a new datatable interval v.s. steps
+
+```r
+tmp <- summarize(group_by(df, interval), mean(steps, na.rm = T))
+```
+
+Using summary(), find the maximum number of steps. Use the result to find the row containing maximum number of steps.
+
+```r
 summary(tmp)
-## interval      mean(steps, na.rm = T)
-## Min.   :   0.0   Min.   :  0.000       
-## 1st Qu.: 588.8   1st Qu.:  2.486       
-## Median :1177.5   Median : 34.113       
-## Mean   :1177.5   Mean   : 37.383       
-## 3rd Qu.:1766.2   3rd Qu.: 52.835       
-## Max.   :2355.0   Max.   :206.170 
+```
 
+```
+##          date        steps      
+##  2012-10-01: 1   Min.   :   41  
+##  2012-10-02: 1   1st Qu.: 9819  
+##  2012-10-03: 1   Median :10766  
+##  2012-10-04: 1   Mean   :10766  
+##  2012-10-05: 1   3rd Qu.:12811  
+##  2012-10-06: 1   Max.   :21194  
+##  (Other)   :55
+```
+
+```r
 filter(tmp, tmp$`mean(steps, na.rm = T)` > 206)
-## Interval 835 contains the maximum number of steps.
+```
+
+```
+## Error in eval(expr, envir, enclos): incorrect length (0), expecting: 61
+```
 
 ## Imputing missing values
+Use summary() to find out how many rows contains missing values(NA)
 
+```r
 summary(df)
-## missing value = 2304 rows
-library(tidyr)
-## replace NA with mean for that 5-minute interval
+```
+
+```
+##      steps                date          interval     
+##  Min.   :  0.00   2012-10-01:  288   Min.   :   0.0  
+##  1st Qu.:  0.00   2012-10-02:  288   1st Qu.: 588.8  
+##  Median :  0.00   2012-10-03:  288   Median :1177.5  
+##  Mean   : 37.38   2012-10-04:  288   Mean   :1177.5  
+##  3rd Qu.: 12.00   2012-10-05:  288   3rd Qu.:1766.2  
+##  Max.   :806.00   2012-10-06:  288   Max.   :2355.0  
+##  NA's   :2304     (Other)   :15840
+```
+--> missing value = 2304 rows
+
+Replace NA with mean for that 5-minute interval, write the result to a tidy file called padded.csv
+
+
+```r
 new <- replace_na(df, replace = list(steps = tmp$'mean(steps, na.rm = T)'))
 write.csv(new, "padded.csv", row.names = F)
-## Histogram of total number of steps take each day
-png("instructions_fig/plot3.png", width = 480, height = 480)
-  tmp <- aggregate(steps ~ date, FUN = sum, data = new)
-  hist(tmp$steps)
-dev.off()
+```
+
+Histogram of total number of steps take each day
+
+![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11-1.png) 
+
+
+```r
 mean(tmp$steps)
+```
+
+```
+## [1] 10766.19
+```
+
+```r
 median(tmp$steps)
+```
+
+```
+## [1] 10766.19
+```
 ## Are there differences in activity patterns between weekdays and weekends?
+
+Use wday() and bind_cols() to create a new column weekdays
+
+```r
 library(lubridate)
 x <- sub('2', 'weekday',
         sub('3', 'weekday',
@@ -70,21 +147,39 @@ x <- sub('2', 'weekday',
                             sub('1', 'weekend',
                                 wday(new$date))))))))
 weekdays <- bind_cols(new, data.table(weekdays = x))
+```
 
-png("instructions_fig/plot4.png", width = 480, height = 480)
-  par(mfrow = c(1,2))
-  weekdayfilter(new, weekdays == "weekday")
-    plot(tidyData4$tidyTime, tidyData4$Global_active_power, 
-       type = "l", 
-       ylab = "Global Active Power (kilowatts)", 
-       xlab = "")
-  
-  plot(tidyData4$tidyTime, tidyData4$Voltage, 
-       type = "l", 
-       ylab = "Voltage", 
-       xlab = "datetime")
-    legend("topright", 
-         legend = c("Sub_metering_1", "Sub_metering_2", "Sub_metering_3"), 
-         col = c("black", "red", "blue"), 
-         lty = c(1,1))
-dev.off()
+
+```r
+head(weekdays)
+```
+
+```
+## Source: local data frame [6 x 4]
+## 
+##       steps       date interval weekdays
+##       (dbl)     (fctr)    (int)    (chr)
+## 1 1.7169811 2012-10-01        0  weekday
+## 2 0.3396226 2012-10-01        5  weekday
+## 3 0.1320755 2012-10-01       10  weekday
+## 4 0.1509434 2012-10-01       15  weekday
+## 5 0.0754717 2012-10-01       20  weekday
+## 6 2.0943396 2012-10-01       25  weekday
+```
+
+
+```r
+group1 <- filter(weekdays, weekdays == "weekday")
+group2 <- filter(weekdays, weekdays == "weekend")
+```
+
+Comparing weekdays and weekend
+
+
+```
+## Error: measure variables not found in data: weekday, weekend
+```
+
+```
+## Error in eval(substitute(groups), data, environment(x)): object 'gr' not found
+```
