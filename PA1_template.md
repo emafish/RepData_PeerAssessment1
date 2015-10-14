@@ -14,6 +14,7 @@ library(shiny)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
+library(lattice)
 df <- read.csv("activity.csv")
 ```
 ## What is mean total number of steps taken per day?
@@ -45,7 +46,7 @@ median(total_steps$steps)
 ## [1] 10765
 ```
 ## What is the average daily activity pattern?
-Use the summarize() function:
+Use the summarize() function to create a new datatable interval v.s. steps:
 
 ```r
 tmp <- summarize(group_by(df, interval), mean(steps, na.rm = T))
@@ -54,12 +55,6 @@ Average daily activity
 
 ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-6-1.png) 
 
-Use summarize() to create a new datatable interval v.s. steps
-
-```r
-tmp <- summarize(group_by(df, interval), mean(steps, na.rm = T))
-```
-
 Using summary(), find the maximum number of steps. Use the result to find the row containing maximum number of steps.
 
 ```r
@@ -67,14 +62,13 @@ summary(tmp)
 ```
 
 ```
-##          date        steps      
-##  2012-10-01: 1   Min.   :   41  
-##  2012-10-02: 1   1st Qu.: 9819  
-##  2012-10-03: 1   Median :10766  
-##  2012-10-04: 1   Mean   :10766  
-##  2012-10-05: 1   3rd Qu.:12811  
-##  2012-10-06: 1   Max.   :21194  
-##  (Other)   :55
+##     interval      mean(steps, na.rm = T)
+##  Min.   :   0.0   Min.   :  0.000       
+##  1st Qu.: 588.8   1st Qu.:  2.486       
+##  Median :1177.5   Median : 34.113       
+##  Mean   :1177.5   Mean   : 37.383       
+##  3rd Qu.:1766.2   3rd Qu.: 52.835       
+##  Max.   :2355.0   Max.   :206.170
 ```
 
 ```r
@@ -82,7 +76,11 @@ filter(tmp, tmp$`mean(steps, na.rm = T)` > 206)
 ```
 
 ```
-## Error in eval(expr, envir, enclos): incorrect length (0), expecting: 61
+## Source: local data frame [1 x 2]
+## 
+##   interval mean(steps, na.rm = T)
+##      (int)                  (dbl)
+## 1      835               206.1698
 ```
 
 ## Imputing missing values
@@ -114,7 +112,7 @@ write.csv(new, "padded.csv", row.names = F)
 
 Histogram of total number of steps take each day
 
-![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11-1.png) 
+![plot of chunk unnamed-chunk-10](figure/unnamed-chunk-10-1.png) 
 
 
 ```r
@@ -167,19 +165,19 @@ head(weekdays)
 ## 6 2.0943396 2012-10-01       25  weekday
 ```
 
+Calculate average steps based on weekday(group1) or weekend(group2) first and combine them back together.
+
 
 ```r
 group1 <- filter(weekdays, weekdays == "weekday")
+b1 <- aggregate(steps ~ interval, FUN = mean, data = group1) %>%
+  mutate(weekdays = "weekday")
 group2 <- filter(weekdays, weekdays == "weekend")
+b2 <- aggregate(steps ~ interval, FUN = mean, data = group2) %>%
+  mutate(weekdays = "weekend")
+AvgByTypeOfDays <- bind_rows(b1,b2)
 ```
 
 Comparing weekdays and weekend
 
-
-```
-## Error: measure variables not found in data: weekday, weekend
-```
-
-```
-## Error in eval(substitute(groups), data, environment(x)): object 'gr' not found
-```
+![plot of chunk unnamed-chunk-15](figure/unnamed-chunk-15-1.png) 

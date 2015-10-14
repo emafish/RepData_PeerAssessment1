@@ -13,6 +13,7 @@ library(shiny)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
+library(lattice)
 df <- read.csv("activity.csv")
 ```
 ## What is mean total number of steps taken per day?
@@ -33,7 +34,7 @@ mean(total_steps$steps)
 median(total_steps$steps)
 ```
 ## What is the average daily activity pattern?
-Use the summarize() function:
+Use the summarize() function to create a new datatable interval v.s. steps:
 ```{r eval=FALSE}
 tmp <- summarize(group_by(df, interval), mean(steps, na.rm = T))
 ```
@@ -44,11 +45,6 @@ Average daily activity
        main = "Average across all Days",
        xlab = "5-minute Interval",
        ylab = "Average Number of Steps Taken")
-```
-
-Use summarize() to create a new datatable interval v.s. steps
-```{r eval=FALSE}
-tmp <- summarize(group_by(df, interval), mean(steps, na.rm = T))
 ```
 
 Using summary(), find the maximum number of steps. Use the result to find the row containing maximum number of steps.
@@ -102,17 +98,22 @@ weekdays <- bind_cols(new, data.table(weekdays = x))
 head(weekdays)
 ```
 
+Calculate average steps based on weekday(group1) or weekend(group2) first and combine them back together.
+
 ```{r eval=FALSE}
 group1 <- filter(weekdays, weekdays == "weekday")
+b1 <- aggregate(steps ~ interval, FUN = mean, data = group1) %>%
+  mutate(weekdays = "weekday")
 group2 <- filter(weekdays, weekdays == "weekend")
+b2 <- aggregate(steps ~ interval, FUN = mean, data = group2) %>%
+  mutate(weekdays = "weekend")
+AvgByTypeOfDays <- bind_rows(b1,b2)
 ```
 
 Comparing weekdays and weekend
 
 ```{r echo=FALSE}
   library(lattice)
-  gr <- melt(weekdays, measure.vars = c("weekday","weekend"))
-  xyplot(steps~interval|weekdays, data = gr,
-         panel = "panel.lines", layout = c(1,2))
-
+  xyplot(steps ~ interval|weekdays, 
+         AvgByTypeOfDays, type = "l", layout = c(1,2))
 ```
